@@ -13,7 +13,7 @@ import org.bson.BsonDocument
 import org.bson.Document
 import xyz.pubps.app.objectMapper
 
-class CustomMongoSerializer: MongoSerializationSchema<KafkaMessage> {
+class CustomMongoSerializationSchema: MongoSerializationSchema<KafkaMessage> {
 
   override fun serialize(
     element: KafkaMessage,

@@ -1,0 +1,158 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: cdc-source-mysql-deploy
+  namespace: flink
+spec:
+  image: psawesome/vircle/flink/cdc-source-mysql:v1
+  flinkVersion: v1_20
+  imagePullPolicy: Always
+  serviceAccount: flink
+
+  flinkConfiguration:
+    env.java.opts: "-XX:+UseG1GC --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.time=ALL-UNNAMED"
+    jobmanager.scheduler: adaptive
+    taskmanager.numberOfTaskSlots: "1"
+    state.checkpoints.dir: s3://vircle-flink/cdc/source-mysql/v1/prod/checkpoints
+    state.savepoints.dir: s3://vircle-flink/cdc/source-mysql/v1/prod/savepoints
+    state.backend.type: rocksdb   # 또는 filesystem
+    state.checkpoint-storage: filesystem
+    # ha
+    high-availability.type: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    high-availability.storageDir: s3://vircle-flink/cdc/source-mysql/v1/prod/ha
+    fs.allowed-fallback-filesystems: "s3"
+    s3.access-key: access-key
+    s3.secret-key: secret-key
+    kubernetes.operator.periodic.savepoint.interval: 1h
+  jobManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+    podTemplate:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: pod-template
+      spec:
+        serviceAccount: flink
+        containers:
+          # Do not change the main container name
+          - name: flink-main-container
+            env:
+              - name: CHECKPOINT_ROOT_DIR
+                value: s3://vircle-flink/cdc/source-mysql/v1
+
+              - name: FLINK_ENV
+                value: prod
+
+              - name: RDB_HOST
+                value:
+              - name: RDB_PORT
+                value:
+              - name: RDB_USERNAME
+                value:
+              - name: RDB_PASSWORD
+                value:
+              - name: RDB_DATABASE_LIST
+                value:
+              - name: RDB_TABLE_LIST
+                value:
+
+              - name: KAFKA_HOST
+                value:
+              - name: KAFKA_API_KEY
+                value:
+              - name: KAFKA_API_SECRET
+                value:
+
+              - name: MONGO_HOST
+                value:
+              - name: MONGO_DATABASE
+                value:
+
+#        tolerations:
+#          - key: "eks.amazonaws.com/nodegroup"
+#            operator: "Equal"
+#            value: "proc"
+#            effect: "NoSchedule"
+
+  taskManager:
+    resource:
+      memory: "1024m"
+      cpu: 1
+    podTemplate:
+      apiVersion: v1
+      kind: Pod
+      metadata:
+        name: pod-template
+      spec:
+        serviceAccount: flink
+        containers:
+          - name: flink-main-container
+            env:
+              - name: CHECKPOINT_ROOT_DIR
+                value: s3://vircle-flink/cdc/source-mysql/v1
+
+              - name: FLINK_ENV
+                value: prod
+
+              - name: RDB_HOST
+                value:
+              - name: RDB_PORT
+                value:
+              - name: RDB_USERNAME
+                value:
+              - name: RDB_PASSWORD
+                value:
+              - name: RDB_DATABASE_LIST
+                value:
+              - name: RDB_TABLE_LIST
+                value:
+
+              - name: KAFKA_HOST
+                value:
+              - name: KAFKA_API_KEY
+                value:
+              - name: KAFKA_API_SECRET
+                value:
+
+              - name: MONGO_HOST
+                value:
+              - name: MONGO_DATABASE
+                value:
+#        tolerations:
+#          - key: "eks.amazonaws.com/nodegroup"
+#            operator: "Equal"
+#            value: "proc"
+#            effect: "NoSchedule"
+
+    replicas: 1
+  job:
+#    initialSavepointPath: s3://vircle-flink/cdc/source-mysql/v1/prod/savepoints/savepoint-392bfa-d328a90e28d6
+    savepointRedeployNonce: 1
+    jarURI: "local:///opt/flink/usrlib/cdc-source-mysql-app-1.0.0.jar"
+    parallelism: 4
+    upgradeMode: last-state
+    args:
+      - first
+      - second
+    state: running
+
+
+---
+
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkStateSnapshot
+metadata:
+  name: cdc-source-mysql-state
+spec:
+  backoffLimit: 1  # retry count, -1 for infinite, 0 for no retries (default: -1)
+  jobReference:
+    kind: FlinkDeployment  # FlinkDeployment or FlinkSessionJob
+    name: cdc-source-mysql-deploy  # name of the resource
+  savepoint:
+    alreadyExists: false  # optional (default: false), if true, the path is considered to already exist and state will be COMPLETED on first reconciliation
+    disposeOnDelete: true  # optional (default: true), dispose of savepoint when this FlinkStateSnapshot is removed, job needs to be running
+    formatType: CANONICAL  # optional (default: CANONICAL), format type of savepoint
+    path: s3://vircle-flink/cdc/source-mysql/v1/prod/savepoints  # optional (default: job savepoint path)
+

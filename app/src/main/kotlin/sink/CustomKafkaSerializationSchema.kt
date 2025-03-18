@@ -6,7 +6,7 @@ import org.apache.kafka.clients.producer.ProducerRecord
 import xyz.pubps.app.objectMapper
 import java.time.Instant
 
-class CustomKafkaSerializer : KafkaRecordSerializationSchema<KafkaMessage> {
+class CustomKafkaSerializationSchema : KafkaRecordSerializationSchema<KafkaMessage> {
 
   override fun serialize(
     element: KafkaMessage,

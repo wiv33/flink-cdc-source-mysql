@@ -1,20 +1,21 @@
+package sink
+
 import com.mongodb.client.MongoClients
 import com.mongodb.client.MongoCollection
 import com.mongodb.client.MongoDatabase
 import com.mongodb.client.model.Filters
 import com.mongodb.client.model.ReplaceOptions
 import dto.KafkaMessage
+import org.apache.flink.api.common.eventtime.Watermark
 import org.apache.flink.api.connector.sink2.Sink
 import org.apache.flink.api.connector.sink2.SinkWriter
 import org.apache.flink.api.connector.sink2.SinkWriter.Context
 import org.bson.Document
 
-val mongoUri = System.getenv("MONGO_HOST")
-val mongoDatabase = System.getenv("MONGO_DATABASE")
-
 // Flink SinkV2 MongoDB Sink
-class MongoSinkV2(
-) : Sink<KafkaMessage> {
+class MongoSinkV2 : Sink<KafkaMessage> {
+  val mongoUri: String = System.getenv("MONGO_HOST")
+  val mongoDatabase: String = System.getenv("MONGO_DATABASE")
 
   @Deprecated("Deprecated in Java")
   override fun createWriter(context: Sink.InitContext): SinkWriter<KafkaMessage> {
@@ -27,6 +28,9 @@ class MongoSinkV2(
   ) : SinkWriter<KafkaMessage> {
 
     private val database: MongoDatabase = MongoClients.create(mongoUri).getDatabase(databaseName)
+    override fun writeWatermark(watermark: Watermark?) {
+      super.writeWatermark(watermark)
+    }
 
     override fun write(record: KafkaMessage, context: Context) {
       val collectionName = record.topic.split(Regex("\\.")).last()
