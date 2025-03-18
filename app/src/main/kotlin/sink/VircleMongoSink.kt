@@ -1,0 +1,4 @@
+package sink
+
+class VircleMongoSink {
+}
